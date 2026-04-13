@@ -1,65 +1,225 @@
-import Image from "next/image";
+'use client'
+
+import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
+import { toHalfWidthKana } from "@/lib/kana-utils";
+
+interface Drug {
+  iyaku_code: string;
+  name_kanji: string;
+  name_kana: string;
+  unit_name: string;
+  price: number;
+  controlled_drugs: string;
+  dosage_form: string;
+  yakkasyusai_code: string;
+  transitional_measures: string;
+  generic_code: string;
+  generic_name: string;
+  additional_fee: number;
+}
+
+const CONTROLLED_DRUG_LABELS: Record<string, string> = {
+  "1": "麻薬",
+  "2": "毒薬",
+  "3": "覚醒剤原料",
+  "5": "向精神薬",
+};
+
+function formatTransitionalMeasures(value: string): string | null {
+  if (!value || value === "0") return null;
+  const y = value.slice(0, 4);
+  const m = value.slice(4, 6);
+  const d = value.slice(6, 8);
+  return `${y}年${m}月${d}日まで`;
+}
+
+function formatPrice(price: number): string {
+  return price.toLocaleString("ja-JP", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }) + "円";
+}
 
 export default function Home() {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<Drug[]>([]);
+  const [selected, setSelected] = useState<Drug | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [searched, setSearched] = useState(false);
+  const [tooShort, setTooShort] = useState(false);
+  const [dark, setDark] = useState(false);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", dark);
+  }, [dark]);
+
+  async function handleSearch() {
+    const trimmed = query.trim();
+    if (!trimmed) return;
+
+    if ([...trimmed].length < 3) {
+      setTooShort(true);
+      setSearched(false);
+      setResults([]);
+      return;
+    }
+
+    setTooShort(false);
+    setLoading(true);
+    setSelected(null);
+    setSearched(true);
+
+    const halfKana = toHalfWidthKana(trimmed);
+
+    const { data, error } = await supabase
+      .from("drugs")
+      .select("*")
+      .or(`name_kana.ilike.%${halfKana}%,name_kanji.ilike.%${trimmed}%`)
+      .limit(100);
+
+    if (!error && data) {
+      setResults(data as Drug[]);
+    } else {
+      setResults([]);
+    }
+
+    setLoading(false);
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter") handleSearch();
+  }
+
+  const controlledLabel = selected
+    ? CONTROLLED_DRUG_LABELS[selected.controlled_drugs] ?? null
+    : null;
+  const transitionalLabel = selected
+    ? formatTransitionalMeasures(selected.transitional_measures)
+    : null;
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+      {/* ヘッダー */}
+      <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 py-4">
+        <div className="max-w-3xl mx-auto">
+          <div className="flex items-center justify-between mb-3">
+            <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">薬価サーチ</h1>
+            <button
+              onClick={() => setDark(!dark)}
+              className="text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-100 transition-colors text-sm px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+              {dark ? "☀ ライト" : "☾ ダーク"}
+            </button>
+          </div>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="医薬品名を入力（例：ガスター、アムロジピン）"
+              className="flex-1 border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            <button
+              onClick={handleSearch}
+              disabled={loading}
+              className="bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            >
+              {loading ? "検索中…" : "検索"}
+            </button>
+          </div>
         </div>
-      </main>
+      </header>
+
+      <div className="max-w-3xl mx-auto px-4 py-6 flex gap-4">
+        {/* 検索結果一覧 */}
+        <div className="flex-1 min-w-0">
+          {tooShort && (
+            <p className="text-red-500 dark:text-red-400 text-sm">3文字以上で入力してください。</p>
+          )}
+          {searched && !loading && results.length === 0 && (
+            <p className="text-gray-500 dark:text-gray-400 text-sm">該当する医薬品が見つかりませんでした。</p>
+          )}
+          {results.length > 0 && (
+            <div className="space-y-1">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{results.length}件を表示</p>
+              {results.map((drug) => (
+                <button
+                  key={drug.iyaku_code}
+                  onClick={() => setSelected(drug)}
+                  className={`w-full text-left px-4 py-3 rounded-lg border transition-colors ${
+                    selected?.iyaku_code === drug.iyaku_code
+                      ? "border-blue-500 bg-blue-50 dark:bg-blue-950"
+                      : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950"
+                  }`}
+                >
+                  <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{drug.name_kanji}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{formatPrice(drug.price)} / {drug.unit_name}</p>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* 詳細パネル */}
+        {selected && (
+          <div className="w-72 shrink-0">
+            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4 sticky top-4">
+              <div className="flex items-start justify-between gap-2 mb-4">
+                <h2 className="text-sm font-bold text-gray-800 dark:text-gray-100 leading-snug">{selected.name_kanji}</h2>
+                <button
+                  onClick={() => setSelected(null)}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-lg leading-none shrink-0"
+                >
+                  ×
+                </button>
+              </div>
+
+              <dl className="space-y-3 text-sm">
+                <div>
+                  <dt className="text-xs text-gray-500 dark:text-gray-400">薬価</dt>
+                  <dd className="font-semibold text-gray-800 dark:text-gray-100">{formatPrice(selected.price)} / {selected.unit_name}</dd>
+                </div>
+
+                {controlledLabel && (
+                  <div>
+                    <dt className="text-xs text-gray-500 dark:text-gray-400">規制区分</dt>
+                    <dd>
+                      <span className="inline-block bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 text-xs font-medium px-2 py-0.5 rounded">
+                        {controlledLabel}
+                      </span>
+                    </dd>
+                  </div>
+                )}
+
+                {transitionalLabel && (
+                  <div>
+                    <dt className="text-xs text-gray-500 dark:text-gray-400">経過措置期限</dt>
+                    <dd className="text-orange-600 dark:text-orange-400 font-medium">{transitionalLabel}</dd>
+                  </div>
+                )}
+
+                <div>
+                  <dt className="text-xs text-gray-500 dark:text-gray-400">一般名</dt>
+                  <dd className="text-gray-700 dark:text-gray-300">{selected.generic_name || "−"}</dd>
+                </div>
+
+                {Number(selected.additional_fee) === 1 && (
+                  <div>
+                    <dt className="text-xs text-gray-500 dark:text-gray-400">選定療養</dt>
+                    <dd>
+                      <span className="inline-block bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300 text-xs font-medium px-2 py-0.5 rounded">
+                        対象
+                      </span>
+                    </dd>
+                  </div>
+                )}
+              </dl>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
