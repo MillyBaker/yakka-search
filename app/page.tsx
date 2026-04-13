@@ -133,8 +133,8 @@ export default function Home() {
       </header>
 
       <div className="max-w-3xl mx-auto px-4 py-6 flex gap-4">
-        {/* 検索結果一覧 */}
-        <div className="flex-1 min-w-0">
+        {/* 検索結果一覧（スマホで詳細表示中は下部スペース確保） */}
+        <div className={`flex-1 min-w-0 ${selected ? "pb-64 sm:pb-0" : ""}`}>
           {tooShort && (
             <p className="text-red-500 dark:text-red-400 text-sm">3文字以上で入力してください。</p>
           )}
@@ -162,10 +162,18 @@ export default function Home() {
           )}
         </div>
 
-        {/* 詳細パネル */}
+        {/* 詳細パネル：PCは右サイド、スマホは画面下部に固定 */}
         {selected && (
-          <div className="w-72 shrink-0">
-            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4 sticky top-4">
+          <div className="
+            fixed bottom-0 left-0 right-0 z-50 sm:static sm:w-72 sm:shrink-0 sm:z-auto
+          ">
+            <div className="
+              bg-white dark:bg-gray-900
+              border-t border-gray-200 dark:border-gray-700
+              sm:border sm:rounded-lg
+              p-4 sm:sticky sm:top-4
+              max-h-64 sm:max-h-none overflow-y-auto
+            ">
               <div className="flex items-start justify-between gap-2 mb-4">
                 <h2 className="text-sm font-bold text-gray-800 dark:text-gray-100 leading-snug">{selected.name_kanji}</h2>
                 <button
