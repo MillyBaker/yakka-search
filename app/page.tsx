@@ -49,6 +49,11 @@ export default function Home() {
   const [searched, setSearched] = useState(false);
   const [tooShort, setTooShort] = useState(false);
   const [dark, setDark] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    setIsMobile("ontouchstart" in window || navigator.maxTouchPoints > 0);
+  }, []);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
@@ -155,7 +160,7 @@ export default function Home() {
 
       <div className="max-w-3xl mx-auto px-4 py-6 flex gap-4">
         {/* 検索結果一覧（スマホで詳細表示中は下部スペース確保） */}
-        <div className={`flex-1 min-w-0 ${selected ? "list-with-detail-padding" : ""}`}>
+        <div className="flex-1 min-w-0" style={selected && isMobile ? { paddingBottom: "16rem" } : {}}>
           {tooShort && (
             <p className="text-red-500 dark:text-red-400 text-sm">3文字以上で入力してください。</p>
           )}
@@ -185,8 +190,8 @@ export default function Home() {
 
         {/* 詳細パネル：PCは右サイド、スマホは画面下部に固定 */}
         {selected && (
-          <div className="detail-panel-wrapper">
-            <div className="detail-panel-inner bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 p-4">
+          <div style={isMobile ? { position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 50 } : { width: "18rem", flexShrink: 0 }}>
+            <div className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 p-4" style={isMobile ? { borderTopWidth: 1, borderTopStyle: "solid", maxHeight: "16rem", overflowY: "auto" } : { border: "1px solid", borderRadius: "0.5rem", position: "sticky", top: "1rem" }}>
               <div className="flex items-start justify-between gap-2 mb-4">
                 <h2 className="text-sm font-bold text-gray-800 dark:text-gray-100 leading-snug">{selected.name_kanji}</h2>
                 <button
