@@ -100,6 +100,27 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+      <style>{`
+        @media (max-width: 639px) {
+          .detail-panel-wrapper {
+            position: fixed !important;
+            bottom: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            width: 100% !important;
+            z-index: 50 !important;
+          }
+          .detail-panel-inner {
+            position: static !important;
+            border-radius: 0 !important;
+            max-height: 16rem !important;
+            overflow-y: auto !important;
+          }
+          .list-with-detail-padding {
+            padding-bottom: 16rem !important;
+          }
+        }
+      `}</style>
       {/* ヘッダー */}
       <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 py-4">
         <div className="max-w-3xl mx-auto">
