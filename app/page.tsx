@@ -49,6 +49,14 @@ export default function Home() {
   const [searched, setSearched] = useState(false);
   const [tooShort, setTooShort] = useState(false);
   const [dark, setDark] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 640);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
@@ -134,7 +142,7 @@ export default function Home() {
 
       <div className="max-w-3xl mx-auto px-4 py-6 flex gap-4">
         {/* 検索結果一覧（スマホで詳細表示中は下部スペース確保） */}
-        <div className={`flex-1 min-w-0 ${selected ? "pb-64 sm:pb-0" : ""}`}>
+        <div className="flex-1 min-w-0" style={selected && isMobile ? { paddingBottom: "16rem" } : {}}>
           {tooShort && (
             <p className="text-red-500 dark:text-red-400 text-sm">3文字以上で入力してください。</p>
           )}
@@ -164,8 +172,8 @@ export default function Home() {
 
         {/* 詳細パネル：PCは右サイド、スマホは画面下部に固定 */}
         {selected && (
-          <div className="fixed bottom-0 left-0 right-0 z-50 sm:static sm:w-72 sm:shrink-0 sm:z-auto">
-            <div className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 sm:border sm:rounded-lg p-4 sm:sticky sm:top-4 max-h-64 sm:max-h-none overflow-y-auto">
+          <div style={isMobile ? { position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 50 } : { width: "18rem", flexShrink: 0 }}>
+            <div className={`bg-white dark:bg-gray-900 p-4 overflow-y-auto ${isMobile ? "border-t border-gray-200 dark:border-gray-700 max-h-64" : "border border-gray-200 dark:border-gray-700 rounded-lg"}`} style={isMobile ? {} : { position: "sticky", top: "1rem" }}>
               <div className="flex items-start justify-between gap-2 mb-4">
                 <h2 className="text-sm font-bold text-gray-800 dark:text-gray-100 leading-snug">{selected.name_kanji}</h2>
                 <button
